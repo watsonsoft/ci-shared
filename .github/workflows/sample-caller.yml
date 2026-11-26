@@ -45,4 +45,6 @@ jobs:
     runs-on: ${{ fromJSON(needs.pick.outputs.fallback) }}
     timeout-minutes: 5
     steps:
-      - run: echo "A deploy job runs on ${{ needs.pick.outputs.fallback }}, never the pool. Ran on $RUNNER_NAME." | tee -a "$GITHUB_STEP_SUMMARY"
+      - env:
+          FALLBACK: ${{ needs.pick.outputs.fallback }}
+        run: echo "A deploy job runs on $FALLBACK, never the pool. Ran on $RUNNER_NAME." | tee -a "$GITHUB_STEP_SUMMARY"
