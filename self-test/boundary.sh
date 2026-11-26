@@ -59,6 +59,10 @@ check "a container can't reach the LAN either"       sh -c "! docker run --rm al
 # --- memory (ticket 03): everything CI runs is under one capped slice ---
 check "CI memory is capped (user-2000.slice)"        sh -c 'm=$(cat /sys/fs/cgroup/user.slice/user-2000.slice/memory.max) && [ "$m" != max ] && [ "$m" -le $((14 * 1024 * 1024 * 1024)) ] && grep -q "user-2000.slice" /proc/self/cgroup'
 
+# --- after-job cleanup (ticket 04) ---
+check "after-job cleanup hook is set"                sh -c 'test -x "${ACTIONS_RUNNER_HOOK_JOB_COMPLETED:-/nonexistent}"'
+check "nightly Docker prune is scheduled"            test -e /etc/systemd/system/timers.target.wants/ci-docker-prune.timer
+
 # --- what CI needs ---
 check "KSP is readable"                         test -r /mnt/ksp/KSP_x64_Data/Managed/Assembly-CSharp.dll
 check "KSP is read-only"                        not touch /mnt/ksp/.selftest-write

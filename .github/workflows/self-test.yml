@@ -1,15 +1,48 @@
 # The runner pool's self-test (pc-hardening seam 1): from inside a real job on the pool, checks the runner
-# environment's boundary and what CI needs. Rerun it after any change to the runner environment.
+# environment's boundary and what CI needs. Rerun it after any change to the runner environment. It also runs
+# weekly, and fails with a clear message when the pool is offline instead of waiting in the queue for a runner.
 name: self-test
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '17 9 * * 1'   # Mondays, 03:17 Central
   push:
     branches: [main]
     paths: [self-test/**, .github/workflows/self-test.yml]
 permissions:
   contents: read
 jobs:
+  pool-online:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check the runner pool is online
+        env:
+          GH_TOKEN: ${{ secrets.RUNNER_STATUS_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::RUNNER_STATUS_TOKEN isn't set in this repo, so the pool's status can't be read. On the PC, run: runners/set-runner-status-token.sh ci-shared"
+            exit 1
+          fi
+          if ! runners=$(gh api orgs/watsonsoft/actions/runners --paginate \
+              --jq '.runners[] | select(any(.labels[]; .name == "home-wsl")) | "\(.name) \(.status) \(if .busy then "busy" else "idle" end)"'); then
+            echo "::error::RUNNER_STATUS_TOKEN can't list watsonsoft's runners (expired or revoked?). On the PC, run: runners/set-runner-status-token.sh --new ci-shared"
+            exit 1
+          fi
+          echo "$runners"
+          online=$(grep -c ' online ' <<<"$runners" || true)
+          total=$(grep -c . <<<"$runners" || true)
+          if [ "$online" -eq 0 ]; then
+            echo "::error::The runner pool is offline: none of its $total runners (label home-wsl) is online. Is the PC on, and is the ci distro running? See pc-hardening runners/ci-env."
+            exit 1
+          fi
+          if [ "$online" -lt "$total" ]; then
+            echo "::warning::Only $online of $total pool runners are online."
+          fi
+          echo "$online of $total pool runners online."
+
   boundary:
+    needs: pool-online
     runs-on: [self-hosted, home-wsl]
     timeout-minutes: 10
     services:
