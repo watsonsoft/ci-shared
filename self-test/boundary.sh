@@ -44,6 +44,21 @@ for d in "${blockdevs[@]}"; do
 done
 check "service container reachable on its host port" curl -fsS --max-time 10 "http://127.0.0.1:${SERVICE_PORT:?}/"
 
+# --- network (ticket 03): jobs live in rootless Docker's network namespace; uid 2000 can't reach private ranges ---
+unreachable() { ! timeout 5 bash -c "exec 3<>/dev/tcp/$1/$2" 2>/dev/null; }
+[ -r /etc/ci-hostinfo ] && . /etc/ci-hostinfo
+check "has its own network namespace (no host loopback)" sh -c '! ip -br addr | grep -qE "eth0|wlan"'
+check "lineup-hq (127.0.0.1:8000) unreachable"       unreachable 127.0.0.1 8000
+check "cockpit (127.0.0.1:48765) unreachable"        unreachable 127.0.0.1 48765
+check "host via slirp (10.0.2.2:22) unreachable"     unreachable 10.0.2.2 22
+check "PC's LAN address (${LAN_IP:-unknown}:22) unreachable" sh -c "test -n '${LAN_IP:-}' && ! timeout 5 bash -c 'exec 3<>/dev/tcp/${LAN_IP:-0}/22' 2>/dev/null"
+check "Meshnet (100.112.203.32:22) unreachable"      unreachable 100.112.203.32 22
+check "home router (192.168.1.1:80) unreachable"     unreachable 192.168.1.1 80
+check "a container can't reach the LAN either"       sh -c "! docker run --rm alpine:3.20 timeout 5 nc -z ${LAN_IP:-192.168.1.1} 22"
+
+# --- memory (ticket 03): everything CI runs is under one capped slice ---
+check "CI memory is capped (user-2000.slice)"        sh -c 'm=$(cat /sys/fs/cgroup/user.slice/user-2000.slice/memory.max) && [ "$m" != max ] && [ "$m" -le $((14 * 1024 * 1024 * 1024)) ] && grep -q "user-2000.slice" /proc/self/cgroup'
+
 # --- what CI needs ---
 check "KSP is readable"                         test -r /mnt/ksp/KSP_x64_Data/Managed/Assembly-CSharp.dll
 check "KSP is read-only"                        not touch /mnt/ksp/.selftest-write
