@@ -1,0 +1,23 @@
+# The runner pool's self-test (pc-hardening seam 1): from inside a real job on the pool, checks the runner
+# environment's boundary and what CI needs. Rerun it after any change to the runner environment.
+name: self-test
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [self-test/**, .github/workflows/self-test.yml]
+permissions:
+  contents: read
+jobs:
+  boundary:
+    runs-on: [self-hosted, home-wsl]
+    timeout-minutes: 10
+    services:
+      web:
+        image: nginx:alpine
+        ports: ['80']
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash self-test/boundary.sh
+        env:
+          SERVICE_PORT: ${{ job.services.web.ports['80'] }}
