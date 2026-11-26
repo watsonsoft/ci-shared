@@ -1,0 +1,35 @@
+{
+  "total_count": 1,
+  "runners": [
+    {
+      "id": 109,
+      "name": "other-1",
+      "os": "Linux",
+      "status": "online",
+      "busy": false,
+      "runner_group_id": 1,
+      "labels": [
+        {
+          "id": 0,
+          "name": "self-hosted",
+          "type": "read-only"
+        },
+        {
+          "id": 1,
+          "name": "Linux",
+          "type": "read-only"
+        },
+        {
+          "id": 2,
+          "name": "X64",
+          "type": "read-only"
+        },
+        {
+          "id": 3,
+          "name": "other",
+          "type": "custom"
+        }
+      ]
+    }
+  ]
+}
