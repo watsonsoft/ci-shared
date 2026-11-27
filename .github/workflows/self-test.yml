@@ -54,3 +54,39 @@ jobs:
       - run: bash self-test/boundary.sh
         env:
           SERVICE_PORT: ${{ job.services.web.ports['80'] }}
+
+  # A job that tries to use more memory than its runner's cap is killed alone (pc-hardening ticket 23), and the
+  # pool stays online: pool-after-overrun checks every runner, including this job's, is online afterwards.
+  memory-guard:
+    needs: pool-online
+    runs-on: [self-hosted, home-wsl]
+    timeout-minutes: 10
+    outputs:
+      runner: ${{ steps.who.outputs.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: who
+        run: echo "runner=$RUNNER_NAME" >> "$GITHUB_OUTPUT"
+      - run: bash self-test/memory-guard.sh
+
+  pool-after-overrun:
+    needs: memory-guard
+    if: always() && needs.memory-guard.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every pool runner is online after the overrun
+        env:
+          GH_TOKEN: ${{ secrets.RUNNER_STATUS_TOKEN }}
+          OVERRUN_RUNNER: ${{ needs.memory-guard.outputs.runner }}
+        run: |
+          for i in $(seq 1 12); do
+            runners=$(gh api orgs/watsonsoft/actions/runners --paginate --jq '.runners[] | select(any(.labels[]; .name == "home-wsl")) | "\(.name) \(.status)"')
+            offline=$(grep -v ' online$' <<<"$runners" || true)
+            [ -z "$offline" ] && break
+            sleep 10
+          done
+          echo "$runners"
+          if [ -n "$offline" ]; then echo "::error::Pool runners offline after the overrun (on ${OVERRUN_RUNNER:-?}): $offline"; exit 1; fi
+          echo "All pool runners online after the overrun on ${OVERRUN_RUNNER:-?}."
+
