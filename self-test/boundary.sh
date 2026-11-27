@@ -47,7 +47,9 @@ check "service container reachable on its host port" curl -fsS --max-time 10 "ht
 # --- network (ticket 03): jobs live in rootless Docker's network namespace; uid 2000 can't reach private ranges ---
 unreachable() { ! timeout 5 bash -c "exec 3<>/dev/tcp/$1/$2" 2>/dev/null; }
 [ -r /etc/ci-hostinfo ] && . /etc/ci-hostinfo
-check "has its own network namespace (no host loopback)" sh -c '! ip -br addr | grep -qE "eth0|wlan"'
+# Only the namespace's own interfaces: the host's (eth*, wlan*, loopback0 under mirrored networking) mean the job
+# is on the host network.
+check "has its own network namespace (no host interfaces)" sh -c '! ip -br link | awk "{sub(/@.*/, \"\", \$1); print \$1}" | grep -vqE "^(lo|tap0|docker0|br-[0-9a-f]+|veth[0-9a-f]+)$"'
 check "lineup-hq (127.0.0.1:8000) unreachable"       unreachable 127.0.0.1 8000
 check "cockpit (127.0.0.1:48765) unreachable"        unreachable 127.0.0.1 48765
 check "host via slirp (10.0.2.2:22) unreachable"     unreachable 10.0.2.2 22
