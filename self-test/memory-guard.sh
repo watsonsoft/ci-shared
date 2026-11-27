@@ -21,7 +21,7 @@ fi
 [ "$(cat "$dir/memory.swap.max" 2>/dev/null)" = 0 ] && ok "the runner has no swap" || bad "the runner's memory.swap.max must be 0"
 
 p=$(systemctl show user-2000.slice -p ManagedOOMMemoryPressure --value 2>/dev/null)
-[ "$p" = kill ] && ok "systemd-oomd kills on the slice's memory pressure (limit $(systemctl show user-2000.slice -p ManagedOOMMemoryPressureLimit --value))" \
+[ "$p" = kill ] && ok "systemd-oomd kills on the slice's memory pressure (limit $(( $(systemctl show user-2000.slice -p ManagedOOMMemoryPressureLimit --value) * 100 / 4294967296 ))%)" \
   || bad "user-2000.slice must have ManagedOOMMemoryPressure=kill (got '$p')"
 [ "$(systemctl is-active systemd-oomd.service 2>/dev/null)" = active ] && ok "systemd-oomd is running" || bad "systemd-oomd isn't running"
 
