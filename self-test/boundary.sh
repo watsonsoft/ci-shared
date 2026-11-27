@@ -52,6 +52,7 @@ unreachable() { ! timeout 5 bash -c "exec 3<>/dev/tcp/$1/$2" 2>/dev/null; }
 check "has its own network namespace (no host interfaces)" sh -c '! ip -br link | awk "{sub(/@.*/, \"\", \$1); print \$1}" | grep -vqE "^(lo|tap0|docker0|br-[0-9a-f]+|veth[0-9a-f]+)$"'
 check "lineup-hq (127.0.0.1:8000) unreachable"       unreachable 127.0.0.1 8000
 check "cockpit (127.0.0.1:48765) unreachable"        unreachable 127.0.0.1 48765
+check "test-count reader (127.0.0.1:48767) unreachable" unreachable 127.0.0.1 48767
 check "host via slirp (10.0.2.2:22) unreachable"     unreachable 10.0.2.2 22
 check "PC's LAN address (${LAN_IP:-unknown}:22) unreachable" sh -c "test -n '${LAN_IP:-}' && ! timeout 5 bash -c 'exec 3<>/dev/tcp/${LAN_IP:-0}/22' 2>/dev/null"
 check "Meshnet (100.112.203.32:22) unreachable"      unreachable 100.112.203.32 22
