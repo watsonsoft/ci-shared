@@ -59,6 +59,9 @@ check "a container can't reach the LAN either"       sh -c "! docker run --rm al
 # --- memory (ticket 03): everything CI runs is under one capped slice ---
 check "CI memory is capped (user-2000.slice)"        sh -c 'm=$(cat /sys/fs/cgroup/user.slice/user-2000.slice/memory.max) && [ "$m" != max ] && [ "$m" -le $((14 * 1024 * 1024 * 1024)) ] && grep -q "user-2000.slice" /proc/self/cgroup'
 
+# --- priority (ticket 16): CI is the third tier, well below the owner's main distro (weight 100) ---
+check "CI CPU weight is low (user-2000.slice)"       sh -c 'w=$(cat /sys/fs/cgroup/user.slice/user-2000.slice/cpu.weight) && [ "$w" -le 20 ]'
+
 # --- after-job cleanup (ticket 04) ---
 check "after-job cleanup hook is set"                sh -c 'test -x "${ACTIONS_RUNNER_HOOK_JOB_COMPLETED:-/nonexistent}"'
 check "nightly Docker prune is scheduled"            test -e /etc/systemd/system/timers.target.wants/ci-docker-prune.timer
