@@ -1,0 +1,185 @@
+{
+  "total_count": 6,
+  "runners": [
+    {
+      "id": 101,
+      "name": "pool-1",
+      "os": "Linux",
+      "status": "online",
+      "busy": true,
+      "runner_group_id": 1,
+      "labels": [
+        {
+          "id": 0,
+          "name": "self-hosted",
+          "type": "read-only"
+        },
+        {
+          "id": 1,
+          "name": "Linux",
+          "type": "read-only"
+        },
+        {
+          "id": 2,
+          "name": "X64",
+          "type": "read-only"
+        },
+        {
+          "id": 3,
+          "name": "home-wsl",
+          "type": "custom"
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "name": "pool-2",
+      "os": "Linux",
+      "status": "online",
+      "busy": true,
+      "runner_group_id": 1,
+      "labels": [
+        {
+          "id": 0,
+          "name": "self-hosted",
+          "type": "read-only"
+        },
+        {
+          "id": 1,
+          "name": "Linux",
+          "type": "read-only"
+        },
+        {
+          "id": 2,
+          "name": "X64",
+          "type": "read-only"
+        },
+        {
+          "id": 3,
+          "name": "home-wsl",
+          "type": "custom"
+        }
+      ]
+    },
+    {
+      "id": 103,
+      "name": "pool-3",
+      "os": "Linux",
+      "status": "offline",
+      "busy": false,
+      "runner_group_id": 1,
+      "labels": [
+        {
+          "id": 0,
+          "name": "self-hosted",
+          "type": "read-only"
+        },
+        {
+          "id": 1,
+          "name": "Linux",
+          "type": "read-only"
+        },
+        {
+          "id": 2,
+          "name": "X64",
+          "type": "read-only"
+        },
+        {
+          "id": 3,
+          "name": "home-wsl",
+          "type": "custom"
+        }
+      ]
+    },
+    {
+      "id": 104,
+      "name": "pool-4",
+      "os": "Linux",
+      "status": "offline",
+      "busy": false,
+      "runner_group_id": 1,
+      "labels": [
+        {
+          "id": 0,
+          "name": "self-hosted",
+          "type": "read-only"
+        },
+        {
+          "id": 1,
+          "name": "Linux",
+          "type": "read-only"
+        },
+        {
+          "id": 2,
+          "name": "X64",
+          "type": "read-only"
+        },
+        {
+          "id": 3,
+          "name": "home-wsl",
+          "type": "custom"
+        }
+      ]
+    },
+    {
+      "id": 105,
+      "name": "pool-5",
+      "os": "Linux",
+      "status": "offline",
+      "busy": false,
+      "runner_group_id": 1,
+      "labels": [
+        {
+          "id": 0,
+          "name": "self-hosted",
+          "type": "read-only"
+        },
+        {
+          "id": 1,
+          "name": "Linux",
+          "type": "read-only"
+        },
+        {
+          "id": 2,
+          "name": "X64",
+          "type": "read-only"
+        },
+        {
+          "id": 3,
+          "name": "home-wsl",
+          "type": "custom"
+        }
+      ]
+    },
+    {
+      "id": 106,
+      "name": "pool-6",
+      "os": "Linux",
+      "status": "offline",
+      "busy": false,
+      "runner_group_id": 1,
+      "labels": [
+        {
+          "id": 0,
+          "name": "self-hosted",
+          "type": "read-only"
+        },
+        {
+          "id": 1,
+          "name": "Linux",
+          "type": "read-only"
+        },
+        {
+          "id": 2,
+          "name": "X64",
+          "type": "read-only"
+        },
+        {
+          "id": 3,
+          "name": "home-wsl",
+          "type": "custom"
+        }
+      ]
+    }
+  ]
+}

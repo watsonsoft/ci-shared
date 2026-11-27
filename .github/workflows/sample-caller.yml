@@ -1,0 +1,50 @@
+# A sample caller of the runner picker, and its live test. Another repo calls it as
+#   uses: watsonsoft/ci-shared/.github/workflows/runner-picker.yml@v1
+# here it calls the same commit's copy, so a change is proven before it's tagged.
+name: Sample caller
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Force the pool or the fallback
+        type: choice
+        options: [auto, pool, fallback]
+        default: auto
+
+permissions:
+  contents: read
+
+jobs:
+  pick:
+    uses: ./.github/workflows/runner-picker.yml
+    secrets: inherit
+    with:
+      force: ${{ inputs.force != 'auto' && inputs.force || '' }}
+
+  build:
+    name: Build (on the picked runner)
+    needs: pick
+    runs-on: ${{ fromJSON(needs.pick.outputs.runner) }}
+    timeout-minutes: 10
+    steps:
+      - name: Show where this job ran and why
+        env:
+          RUNNER: ${{ needs.pick.outputs.runner }}
+          POOL: ${{ needs.pick.outputs.pool }}
+          REASON: ${{ needs.pick.outputs.reason }}
+        run: |
+          echo "Ran on $RUNNER_NAME ($RUNNER_ENVIRONMENT). Picked $RUNNER (pool: $POOL): $REASON." | tee -a "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: Deploy (always the fallback)
+    needs: pick
+    runs-on: ${{ fromJSON(needs.pick.outputs.fallback) }}
+    timeout-minutes: 5
+    steps:
+      - env:
+          FALLBACK: ${{ needs.pick.outputs.fallback }}
+        run: echo "A deploy job runs on $FALLBACK, never the pool. Ran on $RUNNER_NAME." | tee -a "$GITHUB_STEP_SUMMARY"
