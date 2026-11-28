@@ -50,7 +50,7 @@ jobs:
         image: nginx:alpine
         ports: ['80']
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: bash self-test/boundary.sh
         env:
           SERVICE_PORT: ${{ job.services.web.ports['80'] }}
@@ -64,7 +64,7 @@ jobs:
     outputs:
       runner: ${{ steps.who.outputs.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - id: who
         run: echo "runner=$RUNNER_NAME" >> "$GITHUB_OUTPUT"
       - run: bash self-test/memory-guard.sh
