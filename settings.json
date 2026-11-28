@@ -1,4 +1,4 @@
 {
-  "overflow": "off",
+  "overflow": "on",
   "fallback_size": "ubicloud-standard-2"
 }
