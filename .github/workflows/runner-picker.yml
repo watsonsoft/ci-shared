@@ -75,7 +75,7 @@ jobs:
     steps:
       # The decision script at exactly the version the caller pinned.
       - name: Fetch the decision script
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ${{ job.workflow_repository }}
           ref: ${{ job.workflow_sha }}
