@@ -10,22 +10,27 @@
 #      then the fallback.
 #
 # The fallback is GitHub-hosted (ubuntu-latest) for a public repo and Ubicloud for a private
-# one: ubicloud-standard-2, or --fallback-size. A repo whose visibility is unknown counts as private.
+# one. A repo whose visibility is unknown counts as private. The Ubicloud size is --repo-size (the
+# repo's CI_FALLBACK_SIZE) when given, else the settings file's fallback_size, else
+# ubicloud-standard-2; a value that isn't a Ubicloud label gives ubicloud-standard-2 and says why.
 # Overflow mode comes from --repo-overflow (on|off) when given, else from the settings file
 # ({"overflow": "on"}); anything unreadable counts as off.
 #
 # Usage:
 #   decide.sh --visibility public|private --fork true|false --deploy true|false
 #             (--runners FILE | --runners-error MESSAGE)
-#             [--settings FILE] [--repo-overflow on|off] [--fallback-size LABEL] [--force pool|fallback]
+#             [--settings FILE] [--repo-overflow on|off] [--repo-size LABEL] [--force pool|fallback]
 #
 # FILE is a response from GET /orgs/{org}/actions/runners. Pool runners carry the label home-wsl.
-# Prints GITHUB_OUTPUT lines: choice, runner (JSON for fromJSON), pool, fallback, reason, overflow.
+# Prints GITHUB_OUTPUT lines: choice, runner (JSON for fromJSON), pool, fallback, reason, overflow,
+# fallback_size (the label and where it came from).
 set -euo pipefail
 
 POOL_LABEL=home-wsl
+DEFAULT_SIZE=ubicloud-standard-2
+UBICLOUD_LABEL='^ubicloud-[a-z0-9]+(-[a-z0-9]+)*$'
 visibility='' fork=false deploy=false runners='' runners_error='' settings=''
-repo_overflow='' fallback_size='' force=''
+repo_overflow='' repo_size='' force=''
 
 while [ $# -gt 0 ]; do
   case $1 in
@@ -36,7 +41,7 @@ while [ $# -gt 0 ]; do
     --runners-error) runners_error=$2 ;;
     --settings) settings=$2 ;;
     --repo-overflow) repo_overflow=$2 ;;
-    --fallback-size) fallback_size=$2 ;;
+    --repo-size) repo_size=$2 ;;
     --force) force=$2 ;;
     *) echo "decide.sh: unknown argument $1" >&2; exit 2 ;;
   esac
@@ -44,12 +49,33 @@ while [ $# -gt 0 ]; do
 done
 case $force in ''|pool|fallback) ;; *) echo "decide.sh: --force must be pool or fallback, not '$force'" >&2; exit 2 ;; esac
 
+# ci-shared's settings file, if it's JSON. Missing or not JSON: unreadable.
+settings_ok=false
+if [ -n "$settings" ] && [ -r "$settings" ] && jq -e 'type == "object"' "$settings" >/dev/null 2>&1; then
+  settings_ok=true
+fi
+
+# A private repo's Ubicloud size: the repo's, else ci-shared's, else the built-in one.
+size_from=built-in
+if [ -n "$repo_size" ]; then
+  if [[ "$repo_size" =~ $UBICLOUD_LABEL ]]; then size=$repo_size; size_from=repo
+  else size=$DEFAULT_SIZE; size_from="built-in; the repo's CI_FALLBACK_SIZE '$repo_size' isn't a Ubicloud label"; fi
+elif ! $settings_ok; then
+  size=$DEFAULT_SIZE; size_from="built-in; ci-shared's settings unreadable"
+else
+  central=$(jq -r 'if has("fallback_size") then (.fallback_size | tostring) else empty end' "$settings")
+  if [ -z "$central" ]; then size=$DEFAULT_SIZE
+  elif [[ "$central" =~ $UBICLOUD_LABEL ]]; then size=$central; size_from=ci-shared
+  else size=$DEFAULT_SIZE; size_from="built-in; ci-shared's fallback_size '${central:0:40}' isn't a Ubicloud label"; fi
+fi
+
 pool_runner="[\"self-hosted\",\"$POOL_LABEL\"]"
 if [ "$visibility" = public ]; then
   fallback_runner='"ubuntu-latest"'; fallback_name='GitHub-hosted ubuntu-latest'
+  size_line="ubuntu-latest (public repo)"
 else
-  label=${fallback_size:-ubicloud-standard-2}
-  fallback_runner="\"$label\""; fallback_name=$label
+  fallback_runner="\"$size\""; fallback_name="$size ($size_from)"
+  size_line="$size ($size_from)"
 fi
 
 # Overflow mode: the repo's override, else ci-shared's settings file, else off.
@@ -57,7 +83,7 @@ case $repo_overflow in
   on|off) overflow=$repo_overflow; overflow_from=repo ;;
   *)
     overflow=off; overflow_from=ci-shared
-    if [ -n "$settings" ] && [ -r "$settings" ]; then
+    if $settings_ok; then
       value=$(jq -r '.overflow // empty' "$settings" 2>/dev/null || true)
       if [ "$value" = on ]; then overflow=on
       elif [ "$value" != off ]; then overflow_from="ci-shared, unreadable"
@@ -73,6 +99,7 @@ choose() { # choose pool|fallback REASON
   else echo "runner=$fallback_runner"; echo "pool=false"; fi
   echo "fallback=$fallback_runner"
   echo "overflow=$overflow"
+  echo "fallback_size=$size_line"
   echo "reason=$2"
   exit 0
 }

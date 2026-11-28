@@ -2,7 +2,7 @@
 #
 #   jobs:
 #     pick:
-#       uses: watsonsoft/ci-shared/.github/workflows/runner-picker.yml@v1
+#       uses: watsonsoft/ci-shared/.github/workflows/runner-picker.yml@v1    # v1 moves to each v1.x.y
 #       secrets: inherit                      # passes RUNNER_STATUS_TOKEN
 #     test:
 #       needs: pick
@@ -16,6 +16,10 @@
 # mode is on); otherwise the fallback. The fallback is GitHub-hosted for a public repo and Ubicloud
 # for a private one. The choice and the reason go to the job summary.
 #
+# The Ubicloud size is set centrally too: settings.json's fallback_size on ci-shared's main (the
+# owner's ci-fallback-size command), overridden for one repo by its CI_FALLBACK_SIZE variable;
+# else ubicloud-standard-2. A public repo always falls back to ubuntu-latest.
+#
 # Overflow mode is read at run time from settings.json on ci-shared's main (flipped by the owner's
 # ci-overflow command), so it changes without a new tag. A repo variable CI_OVERFLOW (on|off)
 # overrides it for that repo. Unreadable counts as off.
@@ -25,7 +29,7 @@ on:
   workflow_call:
     inputs:
       fallback-size:
-        description: Ubicloud label for a private repo's fallback (default ubicloud-standard-2). A public repo's fallback is always ubuntu-latest.
+        description: Retired in v1.1.0 and ignored; set the repo variable CI_FALLBACK_SIZE instead. Still accepted so callers don't break.
         type: string
         default: ''
       deploy:
@@ -90,7 +94,8 @@ jobs:
           # A pull request whose head isn't this repo (a deleted fork's head counts as a fork).
           FORK: ${{ github.event.pull_request && github.event.pull_request.head.repo.full_name != github.repository || false }}
           DEPLOY: ${{ inputs.deploy }}
-          FALLBACK_SIZE: ${{ inputs.fallback-size }}
+          OLD_SIZE_INPUT: ${{ inputs.fallback-size }}
+          REPO_SIZE: ${{ vars.CI_FALLBACK_SIZE }}
           FORCE: ${{ inputs.force }}
           REPO_OVERFLOW: ${{ vars.CI_OVERFLOW }}
           PICKER: ${{ job.workflow_ref }}
@@ -105,7 +110,7 @@ jobs:
           done
           args=(--visibility "$VISIBILITY" --fork "$FORK" --deploy "$DEPLOY"
                 --settings "$tmp/settings.json" --repo-overflow "$REPO_OVERFLOW"
-                --fallback-size "$FALLBACK_SIZE" --force "$FORCE")
+                --repo-size "$REPO_SIZE" --force "$FORCE")
           if [ -z "$STATUS_TOKEN" ]; then
             args+=(--runners-error "RUNNER_STATUS_TOKEN isn't set in this repo")
           elif GH_TOKEN=$STATUS_TOKEN gh api "orgs/$ORG/actions/runners?per_page=100" > "$tmp/runners.json" 2> "$tmp/runners.err"; then
@@ -113,12 +118,19 @@ jobs:
           else
             args+=(--runners-error "$(head -c 300 "$tmp/runners.err" | tr '\n' ' ' | sed 's/ *$//')")
           fi
-          .ci-shared/picker/decide.sh "${args[@]}" | tee -a "$GITHUB_OUTPUT" > "$tmp/out"
+          [ -z "$OLD_SIZE_INPUT" ] || echo "::warning title=Runner picker::the fallback-size input is ignored since v1.1.0; set the repo variable CI_FALLBACK_SIZE instead"
+          .ci-shared/picker/decide.sh "${args[@]}" > "$tmp/out"
+          cat "$tmp/out" >> "$GITHUB_OUTPUT"
+          cat "$tmp/out"
           get() { sed -n "s/^$1=//p" "$tmp/out"; }
           {
             if [ "$(get pool)" = true ]; then echo "### Runner: the pool"; else echo "### Runner: fallback $(get runner)"; fi
             echo
             echo "$(get reason)."
             echo
-            echo "runs-on: \`$(get runner)\` · overflow mode: $(get overflow) · picker: \`$PICKER\`"
+            echo "runs-on: \`$(get runner)\` · fallback: $(get fallback_size) · overflow mode: $(get overflow) · picker: \`$PICKER\`"
+            if [ -n "$OLD_SIZE_INPUT" ]; then
+              echo
+              echo "**Note:** the \`fallback-size: $OLD_SIZE_INPUT\` input is ignored since v1.1.0. Set the repo variable \`CI_FALLBACK_SIZE\` instead (the owner's \`ci-fallback-size\` command)."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
